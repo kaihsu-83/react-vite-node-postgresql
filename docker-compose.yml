@@ -1,0 +1,54 @@
+version: "3.8"  # Docker Compose 的格式版本（可省略）
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: react-vite-frontend  # 容器的名稱
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true  # 給 Vite 的 Watch 使用
+    depends_on:
+      - backend
+  # Node.js 後端服務
+  backend:
+    build:
+      context: ./backend          # 指定 Dockerfile 所在目錄
+    container_name: node-backend  # 容器的名稱
+    ports:
+      - "3000:3000"               # 將容器內的 3000 port 映射到主機的 3000 port
+    volumes:
+      - ./backend:/app            # 將主機的 backend 資料夾掛載到容器內 /app 資料夾
+      - /app/node_modules         # 建立匿名 volume，避免主機覆蓋容器中的 node_modules
+    command: npm run dev          # 啟動容器時執行的命令，這裡是使用 nodemon 啟動應用
+    depends_on:
+      - db                        # 確保 backend 在 db 服務啟動後再啟動
+    environment:                  # 提供環境變數給 Node.js 使用
+      - DB_HOST=db                # PostgreSQL 的主機名（服務名）
+      - DB_PORT=5432              # PostgreSQL 使用的 port
+      - DB_USER=postgres          # 登入 PostgreSQL 的帳號
+      - DB_PASSWORD=postgres      # 登入 PostgreSQL 的密碼
+      - DB_NAME=mydb              # 預設要使用的資料庫名稱
+
+  # PostgreSQL 資料庫服務
+  db:
+    image: postgres:14            # 使用官方 PostgreSQL 版本 14 的映像檔
+    container_name: postgres-db   # 容器名稱
+    restart: always               # 當容器異常停止時，自動重啟
+    environment:                  # PostgreSQL 初始化環境變數
+      POSTGRES_USER: postgres     # 建立的帳號
+      POSTGRES_PASSWORD: postgres # 對應的密碼
+      POSTGRES_DB: mydb           # 啟動後自動建立的資料庫名稱
+    ports:
+      - "5432:5432"               # 將容器內的 PostgreSQL port 映射出來
+    volumes:
+      - postgres-data:/var/lib/postgresql/data  # 資料掛載點，用來持久化資料
+
+# 定義資料卷（volumes）用於資料持久化
+volumes:
+  postgres-data:

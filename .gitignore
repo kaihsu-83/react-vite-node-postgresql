@@ -1,0 +1,8 @@
+# 忽略 backend 的依賴
+backend/node_modules
+
+# 其他可選忽略項
+*.env
+*.log
+dist
+.vscode
